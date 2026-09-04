@@ -1,3 +1,19 @@
+# Initial venv setup with python3.12 for imported modules
+
+py -3.12 -m venv venv
+
+venv\Scripts\activate
+
+pip install -r requirements.txt
+
+# HTML viewer
+
+python visualize.py (delete contents of game_for_vis.json before use)
+
+python make_viewer.py
+
+start "" "game_viewer.html"
+
 # CITS3011 Intelligent Agent Project
 
 This project is to be completed in groups of two or three students.
