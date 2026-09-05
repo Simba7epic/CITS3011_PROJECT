@@ -12,7 +12,7 @@ python visualize.py (delete contents of game_for_vis.json before use)
 
 python make_viewer.py
 
-start "" "game_viewer.html"
+start .\game_viewer.html
 
 # CITS3011 Intelligent Agent Project
 
