@@ -2,6 +2,7 @@ import argparse
 import html
 import json
 import os
+import re
 
 from diplomacy.engine.game import Game
 from diplomacy.engine.renderer import Renderer
@@ -9,6 +10,48 @@ from diplomacy.utils.game_phase_data import GamePhaseData
 
 # Builds a single, self-contained HTML file that lets you step through every
 # phase of a game exported by visualize.py (via run_one_game(..., save_file=...)).
+
+
+def load_agents(json_path):
+    """Loads the power -> agent class name mapping written by visualize.py.
+
+    Looks for a sidecar file next to json_path (e.g. game_for_vis.json ->
+    game_for_vis_agents.json). Returns {} if it doesn't exist, so the viewer
+    still works for games that weren't produced with an agents sidecar.
+    """
+    agents_path = json_path.rsplit('.', 1)[0] + '_agents.json'
+    if not os.path.exists(agents_path):
+        return {}
+    with open(agents_path, 'r', encoding='utf-8') as file:
+        return json.load(file)
+
+
+def extract_power_colors(svg):
+    """Pulls each power's map fill colour out of the rendered SVG's CSS.
+
+    The renderer emits rules like `.france {fill:royalblue; ...}` for every
+    power in the map, so reading them back keeps the legend's swatches in
+    sync with the map even if the colour scheme ever changes.
+    """
+    colors = {}
+    for match in re.finditer(r'\.([a-z]+)\s*\{fill:\s*([^;]+);', svg):
+        colors[match.group(1)] = match.group(2).strip()
+    return colors
+
+
+def build_legend_html(power_names, power_colors, agents):
+    """Builds the "who is who" legend row: colour swatch, power, agent."""
+    items = []
+    for power in power_names:
+        color = power_colors.get(power.lower(), '#999')
+        agent_name = agents.get(power)
+        label = f'{power.title()}' + (f' &mdash; {html.escape(agent_name)}' if agent_name else '')
+        items.append(
+            f'<span class="legend-item">'
+            f'<span class="legend-swatch" style="background:{html.escape(color)}"></span>'
+            f'{label}</span>'
+        )
+    return '\n  '.join(items)
 
 
 def load_last_saved_game(json_path):
@@ -45,8 +88,11 @@ def render_phase_to_svg(saved_game, phase_dict):
     return svg[start:] if start != -1 else svg
 
 
-def build_html(saved_game, svgs_by_phase):
+def build_html(saved_game, svgs_by_phase, agents):
     phase_names = [phase['name'] for phase in saved_game.get('phases', [])]
+    power_names = sorted(saved_game['phases'][0]['state']['units'].keys()) if saved_game.get('phases') else []
+    power_colors = extract_power_colors(svgs_by_phase[0]) if svgs_by_phase else {}
+    legend_html = build_legend_html(power_names, power_colors, agents)
 
     slides = '\n'.join(
         f'<div class="phase" id="phase-{i}" style="display:none">{svg}</div>'
@@ -70,6 +116,9 @@ def build_html(saved_game, svgs_by_phase):
   .phase svg {{ width: 100%; height: auto; display: block; }}
   #slider {{ flex: 1; min-width: 200px; }}
   #meta {{ color: #666; font-size: 0.9em; }}
+  #legend {{ display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; font-size: 0.9em; }}
+  .legend-item {{ display: flex; align-items: center; gap: 6px; }}
+  .legend-swatch {{ display: inline-block; width: 14px; height: 14px; border: 1px solid #333; border-radius: 2px; }}
 </style>
 </head>
 <body>
@@ -87,6 +136,10 @@ def build_html(saved_game, svgs_by_phase):
   <span id="phase-label"></span>
   <input type="range" id="slider" min="0" max="{len(svgs_by_phase) - 1}" value="0">
   <span id="meta">game {game_id} &middot; map: {map_name}</span>
+</div>
+
+<div id="legend">
+  {legend_html}
 </div>
 
 <div id="map-container">
@@ -167,7 +220,8 @@ def make_viewer(json_path, output_path):
         raise ValueError(f'{json_path} contains no phases to render.')
 
     svgs_by_phase = [render_phase_to_svg(saved_game, phase) for phase in phases]
-    html_content = build_html(saved_game, svgs_by_phase)
+    agents = load_agents(json_path)
+    html_content = build_html(saved_game, svgs_by_phase, agents)
 
     with open(output_path, 'w', encoding='utf-8') as file:
         file.write(html_content)

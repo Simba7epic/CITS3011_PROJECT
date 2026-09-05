@@ -8,6 +8,8 @@ pip install -r requirements.txt
 
 # HTML viewer
 
+venv\Scripts\activate
+
 python visualize.py (delete contents of game_for_vis.json before use)
 
 python make_viewer.py

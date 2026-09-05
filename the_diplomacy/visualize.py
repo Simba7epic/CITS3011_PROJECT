@@ -1,24 +1,34 @@
+import json
 import random
 import numpy as np
 from game import run_one_game
 from agent_baselines import StaticAgent, RandomAgent, GreedyAgent, AttitudeAgent
-from agent_groupnumber import StudentAgent
+from agent_48 import StudentAgent
 
 # This file provides an example to simulate one game and export the game process for visualization.
 
 if __name__ == "__main__":
 
 	agents_dict = {
-		'AUSTRIA': StaticAgent(), 
-		'ENGLAND': StaticAgent(), 
-		'FRANCE': StaticAgent(), 
-		'GERMANY': StaticAgent(), 
-		'ITALY': StaticAgent(), 
-		'RUSSIA': StaticAgent(), 
+		'AUSTRIA': StudentAgent(),
+		'ENGLAND': GreedyAgent(),
+		'FRANCE': GreedyAgent(),
+		'GERMANY': GreedyAgent(),
+		'ITALY': GreedyAgent(),
+		'RUSSIA': GreedyAgent(),
 		'TURKEY': GreedyAgent()
 	}
 
-	run_one_game(agents_dict, save_file='game_for_vis.json')
+	save_file = 'game_for_vis.json'
+	run_one_game(agents_dict, save_file=save_file)
+
+	# Save which agent class played each power, so make_viewer.py can show a
+	# "who is who" legend alongside the country colours. This is written to a
+	# sidecar file (rather than into game_for_vis.json) since the saved game
+	# format itself has no field for it.
+	agents_file = save_file.rsplit('.', 1)[0] + '_agents.json'
+	with open(agents_file, 'w', encoding='utf-8') as f:
+		json.dump({power: type(agent).__name__ for power, agent in agents_dict.items()}, f, indent=2)
 
 	'''
 	A JSON file will be saved, which can be visualized using the Web Interface provided on https://github.com/diplomacy/diplomacy?tab=readme-ov-file#web-interface

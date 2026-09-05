@@ -1,0 +1,9 @@
+{
+  "AUSTRIA": "StudentAgent",
+  "ENGLAND": "StaticAgent",
+  "FRANCE": "StaticAgent",
+  "GERMANY": "StaticAgent",
+  "ITALY": "StaticAgent",
+  "RUSSIA": "StaticAgent",
+  "TURKEY": "GreedyAgent"
+}
